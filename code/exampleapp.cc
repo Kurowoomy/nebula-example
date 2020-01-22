@@ -280,6 +280,31 @@ ExampleApplication::Run()
     Characters::CharacterContext::Setup(animatedEntity, "ske:Units/Unit_Footman.nsk3", "ani:Units/Unit_Footman.nax3", "Examples");
     Characters::CharacterContext::PlayClip(animatedEntity, nullptr, 0, 0, Characters::Append, 1.0f, 1, Math::n_rand() * 100.0f, 0.0f, 0.0f, Math::n_rand() * 100.0f);
 
+	//------My own additions-----------------------------------------
+	//
+	Graphics::GraphicsEntityId myFirstEntity = Graphics::CreateEntity();
+	Graphics::RegisterEntity<ModelContext, ObservableContext, Characters::CharacterContext>(myFirstEntity);
+	ModelContext::Setup(myFirstEntity, "mdl:Units/unit_king.n3", "Examples");
+	ModelContext::SetTransform(myFirstEntity, Math::matrix44::translation(Math::point(-5, 0, 0)));
+	ObservableContext::Setup(myFirstEntity, VisibilityEntityType::Model);
+	Characters::CharacterContext::Setup(myFirstEntity, "ske:Units/unit_king.nsk3", "ani:Units/unit_king.nax3", "Examples");
+	Characters::CharacterContext::PlayClip(myFirstEntity, nullptr, 0, 0, Characters::Append, 1.0f, 1, Math::n_rand() * 100.0f, 0.0f, 0.0f, Math::n_rand() * 100.0f);
+
+	//environment model
+	Graphics::GraphicsEntityId myFirstEnv = Graphics::CreateEntity();
+	Graphics::RegisterEntity<ModelContext, ObservableContext>(myFirstEnv);
+	ModelContext::Setup(myFirstEnv, "mdl:environment/Groundplane.n3", "Examples");
+	ModelContext::SetTransform(myFirstEnv, Math::matrix44::translation(Math::point(0, 0, 0)));
+	ObservableContext::Setup(myFirstEnv, VisibilityEntityType::Model);
+
+	
+
+
+
+
+	//
+	//---------------------------------------------------------------
+
     // Create a point light entity
     Graphics::GraphicsEntityId pointLight = Graphics::CreateEntity();
     // You can also register to contexts directly
@@ -388,7 +413,7 @@ ExampleApplication::UpdateCamera()
 {
     const Ptr<Input::Keyboard>& keyboard = inputServer->GetDefaultKeyboard();
     const Ptr<Input::Mouse>& mouse = inputServer->GetDefaultMouse();
-
+	
     this->mayaCameraUtil.SetOrbitButton(mouse->ButtonPressed(Input::MouseButton::LeftButton));
     this->mayaCameraUtil.SetPanButton(mouse->ButtonPressed(Input::MouseButton::MiddleButton));
     this->mayaCameraUtil.SetZoomButton(mouse->ButtonPressed(Input::MouseButton::RightButton));
