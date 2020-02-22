@@ -23,12 +23,15 @@
 #include "core/coreserver.h"
 #include "io/iointerface.h"
 
+#include "ECS.h"
+
 namespace Example
 {
 
 class ExampleApplication : public App::Application
 {
 public:
+	EntityManager* entityManager; //for access in all methods
     /// Constructor
 	ExampleApplication();
     /// Destructor

@@ -32,6 +32,10 @@
 #include "io/fswrapper.h"
 #include "system/nebulasettings.h"
 
+//my own additions
+#include "ECS.h"
+
+
 
 #ifdef __WIN32__
 #include <shellapi.h>
@@ -163,6 +167,7 @@ ExampleApplication::Open()
         ModelContext::Create();
         ObserverContext::Create();
         ObservableContext::Create();
+		entityManager = new EntityManager();
 
 		Graphics::RegisterEntity<CameraContext, ObserverContext>(this->cam);
 		CameraContext::SetupProjectionFov(this->cam, width / (float)height, Math::n_deg2rad(60.f), 0.1f, 1000.0f);
@@ -207,6 +212,13 @@ ExampleApplication::Open()
 void 
 ExampleApplication::Close()
 {
+	//my own additions--------
+	entityManager->shutdown();
+
+
+
+
+
 	App::Application::Close();
     DestroyWindow(this->wnd);
     this->gfxServer->DiscardStage(this->stage);
@@ -297,11 +309,15 @@ ExampleApplication::Run()
 	ModelContext::SetTransform(myFirstEnv, Math::matrix44::translation(Math::point(0, 0, 0)));
 	ObservableContext::Setup(myFirstEnv, VisibilityEntityType::Model);
 
+
+
 	
 
+	entityManager->addEntity<Miner>("miner");
+	entityManager->addEntity<Miner>("miner2");
+	entityManager->init();
 
-
-
+	entityManager->getEntity<Miner>("miner")->moveAwayFromMe(); //message example
 	//
 	//---------------------------------------------------------------
 
@@ -321,6 +337,13 @@ ExampleApplication::Run()
 
         this->inputServer->BeginFrame();
         this->inputServer->OnFrame();
+
+		//my own additions------
+		entityManager->update();
+
+
+
+
 
         this->resMgr->Update(this->frameIndex);
 
