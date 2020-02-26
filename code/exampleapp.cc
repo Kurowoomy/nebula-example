@@ -317,7 +317,7 @@ ExampleApplication::Run()
 	entityManager->addEntity<Miner>("miner2");
 	entityManager->init();
 
-	entityManager->getEntity<Miner>("miner")->moveAwayFromMe(); //message example
+	entityManager->getEntity<Miner>("miner")->sendMsg(&MoveMessage(msg_move, 0, 0, 3, entityManager->getEntity<Miner>("miner2"))); //message example
 	//
 	//---------------------------------------------------------------
 

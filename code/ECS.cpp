@@ -25,13 +25,28 @@ inline std::size_t getComponentID()
 Message::Message()
 {
 }
-Message::Message(message_type msg)
+Message::~Message()
+{
+}
+MoveMessage::MoveMessage()
+{
+}
+MoveMessage::MoveMessage(message_type msg, float x, float y, float z)
 {
 	this->msg = msg;
+	this->x = x;
+	this->y = y;
+	this->z = z;
+	msgReciever = nullptr;
 }
-void Message::sendMsg(BaseEntity* msgReciever)
+
+MoveMessage::MoveMessage(message_type msg, float x, float y, float z, BaseEntity* msgReciever)
 {
-	msgReciever->handleMessage(*this);
+	this->msg = msg;
+	this->x = x;
+	this->y = y;
+	this->z = z;
+	this->msgReciever = msgReciever;
 }
 
 
@@ -64,9 +79,20 @@ T& BaseEntity::addComponent()
 	componentArray[getComponentID<T>()] = unique_component;
 	return *unique_component;
 }
-void BaseEntity::handleMessage(Message msg)
+void BaseEntity::handleMessage(Message* msg)
 {
 	for (auto& c : unique_components) c->handleMessage(msg);
+}
+void BaseEntity::sendMsg(Message* msg)
+{
+	if (msg->msgReciever)
+	{
+		msg->msgReciever->handleMessage(msg);
+	}
+	else
+	{
+		for (auto& e : entityManager->entities) e->handleMessage(msg);
+	}
 }
 void BaseEntity::registerVariable(Util::StringAtom varName, Union value, Type type)
 {
@@ -133,17 +159,17 @@ void Miner::shutdown()
 	unique_components.clear();
 	this->Release();
 }
-void Miner::moveAwayFromMe()
-{
-	messager.msg = msg_test;
-	for (auto& e : entityManager->entities)
-	{
-		if (e.get()->name == "miner2")
-		{
-			messager.sendMsg(e.get());
-		}
-	}
-}
+//void Miner::moveAwayFromMe()
+//{
+//	messager.msg = msg_test;
+//	for (auto& e : entityManager->entities)
+//	{
+//		if (e.get()->name == "miner2")
+//		{
+//			messager.sendMsg(e.get());
+//		}
+//	}
+//}
 
 
 
@@ -167,14 +193,18 @@ void TransformComponent::move(float x, float y, float z)
 {
 	entity->getVariable("matrix44")->matrix44->translate(Math::float4(x, y, z, 0));
 }
-void TransformComponent::handleMessage(Message msg)
+void TransformComponent::handleMessage(Message* msg)
 {
-	switch (msg.msg) {
-	case message_type::msg_test:
-		move(0, 0, 1);
-		break;
-	default:
-		break;
+	MoveMessage* castedMessage = dynamic_cast<MoveMessage*>(msg);
+	if (castedMessage) //responds only if it's a MoveMessage
+	{
+		switch (msg->msg) {
+		case message_type::msg_move:
+			move(castedMessage->x, castedMessage->y, castedMessage->z);
+			break;
+		default:
+			break;
+		}
 	}
 }
 
@@ -260,6 +290,6 @@ void GraphicsComponent::shutdown()
 {
 	this->Release();
 }
-void GraphicsComponent::handleMessage(Message msg)
+void GraphicsComponent::handleMessage(Message* msg)
 {
 }

@@ -42,7 +42,8 @@ enum Type {
 };
 //message types, no functionality at the moment
 enum message_type {
-	msg_test
+	msg_test, 
+	msg_move
 };
 
 //for getComponent method
@@ -54,12 +55,25 @@ template<typename T> inline std::size_t getComponentID();
 class Message {
 public:
 	message_type msg;
+	BaseEntity* msgReciever;
 
 	Message();
-	Message(message_type msg);
-
-	void sendMsg(BaseEntity* msgReciever);
+	virtual ~Message(); //for allowing dynamic casting
 };
+class MoveMessage : public Message
+{
+public:
+	float x, y, z;
+
+	MoveMessage();
+	MoveMessage(message_type msg, float x, float y, float z);
+	MoveMessage(message_type msg, float x, float y, float z, BaseEntity* msgReciever);
+
+	
+};
+//TODO: create move message that inherits from Message, add specific variables in it. 
+//move : Message*
+//varför pekare? kanske inte behövs.
 
 class BaseEntity : public Core::RefCounted
 {
@@ -84,7 +98,8 @@ public:
 		return *static_cast<T*>(ptr);
 	}
 
-	virtual void handleMessage(Message msg); //sends msg to all its components
+	virtual void handleMessage(Message* msg); //sends msg to all its components
+	virtual void sendMsg(Message* msg);
 
 	void registerVariable(Util::StringAtom varName, Union value, Type type); //same as setVariable but checks duplicates
 	void setVariable(Util::StringAtom varName, Union value, Type type);
@@ -133,7 +148,7 @@ public:
 	virtual void update() {}
 	virtual void shutdown() {}
 
-	virtual void handleMessage(Message msg) {}
+	virtual void handleMessage(Message* msg) {}
 };
 
 class TransformComponent : public BaseComponent
@@ -146,7 +161,7 @@ public:
 
 	void setPos(float x, float y, float z); //translation
 	void move(float x, float y, float z); //translate
-	void handleMessage(Message msg);
+	void handleMessage(Message* msg);
 };
 
 struct Union {
@@ -177,7 +192,7 @@ public:
 	void update();
 	void shutdown();
 
-	void moveAwayFromMe(); //message example
+	//void moveAwayFromMe(); //message example
 };
 
 
@@ -191,7 +206,7 @@ public:
 	void update();
 	void shutdown();
 
-	void handleMessage(Message msg);
+	void handleMessage(Message* msg);
 };
 
 
