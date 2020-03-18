@@ -34,6 +34,9 @@
 
 //my own additions
 #include "ECS.h"
+#include "pyBindings.h"
+#include "io/jsonreader.h"
+#include "io/filestream.h"
 
 
 
@@ -167,8 +170,7 @@ ExampleApplication::Open()
         ModelContext::Create();
         ObserverContext::Create();
         ObservableContext::Create();
-		entityManager = new EntityManager();
-
+		
 		Graphics::RegisterEntity<CameraContext, ObserverContext>(this->cam);
 		CameraContext::SetupProjectionFov(this->cam, width / (float)height, Math::n_deg2rad(60.f), 0.1f, 1000.0f);
 
@@ -201,6 +203,7 @@ ExampleApplication::Open()
 
         this->UpdateCamera();
 
+
         return true;
     }
     return false;
@@ -213,7 +216,7 @@ void
 ExampleApplication::Close()
 {
 	//my own additions--------
-	entityManager->shutdown();
+	EntityManager::shutdown();
 
 
 
@@ -279,28 +282,12 @@ ExampleApplication::Run()
     // Setup the observable as a model
     ObservableContext::Setup(exampleEntity, VisibilityEntityType::Model);
 
-    // Example animated entity
-    Graphics::GraphicsEntityId animatedEntity = Graphics::CreateEntity();
-    // The CharacterContext holds skinned, animated entites and takes care of playing animations etc.
-    Graphics::RegisterEntity<ModelContext, ObservableContext, Characters::CharacterContext>(animatedEntity);
-    // create model and move it to the front
-    ModelContext::Setup(animatedEntity, "mdl:Units/Unit_Footman.n3", "Examples");
-    ModelContext::SetTransform(animatedEntity, Math::matrix44::translation(Math::point(5, 0, 0)));
-    ObservableContext::Setup(animatedEntity, VisibilityEntityType::Model);
-    // Setup the character context instance.
-    // nsk3 is the skeleton resource, nax3 is the animation resource. nax3 files can contain multiple animation clips
-    Characters::CharacterContext::Setup(animatedEntity, "ske:Units/Unit_Footman.nsk3", "ani:Units/Unit_Footman.nax3", "Examples");
-    Characters::CharacterContext::PlayClip(animatedEntity, nullptr, 0, 0, Characters::Append, 1.0f, 1, Math::n_rand() * 100.0f, 0.0f, 0.0f, Math::n_rand() * 100.0f);
+	//my own additions--------
 
-	//------My own additions-----------------------------------------
-	//
-	Graphics::GraphicsEntityId myFirstEntity = Graphics::CreateEntity();
-	Graphics::RegisterEntity<ModelContext, ObservableContext, Characters::CharacterContext>(myFirstEntity);
-	ModelContext::Setup(myFirstEntity, "mdl:Units/unit_king.n3", "Examples");
-	ModelContext::SetTransform(myFirstEntity, Math::matrix44::translation(Math::point(-5, 0, 0)));
-	ObservableContext::Setup(myFirstEntity, VisibilityEntityType::Model);
-	Characters::CharacterContext::Setup(myFirstEntity, "ske:Units/unit_king.nsk3", "ani:Units/unit_king.nax3", "Examples");
-	Characters::CharacterContext::PlayClip(myFirstEntity, nullptr, 0, 0, Characters::Append, 1.0f, 1, Math::n_rand() * 100.0f, 0.0f, 0.0f, Math::n_rand() * 100.0f);
+	//pybind11
+	pybind11::scoped_interpreter guard{};
+	pybind11::object object = pybind11::module::import("__main__").attr("__dict__");
+	pybind11::eval_file("C:\\Users\\emmeli-8-local\\Documents\\S0016D_Spelmotorarkitektur\\nebula-env\\nebula-example\\code\\init.py", object, pybind11::dict());
 
 	//environment model
 	Graphics::GraphicsEntityId myFirstEnv = Graphics::CreateEntity();
@@ -311,13 +298,9 @@ ExampleApplication::Run()
 
 
 
-	
 
-	entityManager->addEntity<Miner>("miner");
-	entityManager->addEntity<Miner>("miner2");
-	entityManager->init();
-
-	entityManager->getEntity<Miner>("miner")->sendMsg(&MoveMessage(msg_move, 0, 0, 3, entityManager->getEntity<Miner>("miner2"))); //message example
+	//entityManager->getEntity<Miner>("miner").sendMsg(&MoveMessage(msg_move, 0, 0, 3, *entityManager->getEntity<Miner>("miner2")));
+	//entityManager->getEntity<Miner>("miner")->sendMsg(&MoveMessage(msg_move, 0, 0, 3, entityManager->getEntity<Miner>("miner2"))); //message example
 	//
 	//---------------------------------------------------------------
 
@@ -339,7 +322,7 @@ ExampleApplication::Run()
         this->inputServer->OnFrame();
 
 		//my own additions------
-		entityManager->update();
+		EntityManager::Get().update();
 
 
 

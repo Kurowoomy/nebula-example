@@ -1,0 +1,22 @@
+{
+  "entity1": {
+    "num": 1,
+    "graphicsComponents": {
+      "modelName": "Units/unit_king",
+      "skeletonName": "Units/unit_king",
+      "animationName": "Units/unit_king"
+    }
+  },
+  "entity2": {
+    "num": 50,
+    "graphicsComponents": {
+      "modelName": "Units/Unit_Footman"
+    }
+  },
+  "entity3": {
+    "num": 30,
+    "graphicsComponents": {
+      "modelName": "Units/Unit_Spearman"
+    }
+  }
+}

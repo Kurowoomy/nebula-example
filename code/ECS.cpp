@@ -1,9 +1,13 @@
 #pragma once
 
 #include "ECS.h"
+#include "io/jsonreader.h"
+#include "io/filestream.h"
 
 __ImplementClass(BaseEntity, 'BABC', Core::RefCounted);
-__ImplementClass(Miner, 'BBCD', Core::RefCounted);
+__ImplementClass(King, 'BBCD', Core::RefCounted);
+__ImplementClass(Soldier, 'BCDE', Core::RefCounted);
+__ImplementClass(Spearman, 'BDEF', Core::RefCounted);
 __ImplementClass(BaseComponent, 'AABC', Core::RefCounted);
 __ImplementClass(TransformComponent, 'ABCD', Core::RefCounted);
 __ImplementClass(GraphicsComponent, 'ACDE', Core::RefCounted);
@@ -63,21 +67,17 @@ void BaseEntity::shutdown()
 {
 	for (auto& c : unique_components) {
 		c->shutdown();
-		c.release();
 	}
 	unique_components.clear();
 	this->Release();
 }
 template<typename T>
-T& BaseEntity::addComponent()
+void BaseEntity::addComponent()
 {
-	T* unique_component = T::Create();
-	unique_component->AddRef();
-	unique_component->entity = this;
-	unique_components.emplace_back(unique_component);
-
-	componentArray[getComponentID<T>()] = unique_component;
-	return *unique_component;
+	unique_components.emplace_back(T::Create());
+	unique_components.back()->AddRef();
+	unique_components.back()->entity = this;
+	componentArray[getComponentID<T>()] = unique_components.back();
 }
 void BaseEntity::handleMessage(Message* msg)
 {
@@ -134,27 +134,36 @@ Union* BaseEntity::getVariable(Util::StringAtom varName)
 
 
 
-void Miner::init()
+void King::init()
 {
 	addComponent<TransformComponent>();
-
 	addComponent<GraphicsComponent>();
-	//different model names for each class type
-	registerVariable("modelName", "mdl:Units/unit_king.n3", Type::ResourceName);
-	registerVariable("skeletonName", "ske:Units/unit_king.nsk3", Type::ResourceName);
-	registerVariable("animationName", "ani:Units/unit_king.nax3", Type::ResourceName);
+
+	//register graphics components variables, if it has any
+	Util::String compName;
+	if (jsonVariables.find("modelName") != jsonVariables.end()) {
+		compName = "mdl:" + jsonVariables["modelName"] + ".n3";
+		registerVariable("modelName", compName, Type::ResourceName);
+	}
+	if (jsonVariables.find("skeletonName") != jsonVariables.end()) {
+		compName = "ske:" + jsonVariables["skeletonName"] + ".nsk3";
+		registerVariable("skeletonName", compName, Type::ResourceName);
+	}
+	if (jsonVariables.find("animationName") != jsonVariables.end()) {
+		compName = "ani:" + jsonVariables["animationName"] + ".nax3";
+		registerVariable("animationName", compName, Type::ResourceName);
+	}
 
 	for (auto& c : unique_components) c->init();
 }
-void Miner::update()
+void King::update()
 {
 	for (auto& c : unique_components) c->update();
 }
-void Miner::shutdown()
+void King::shutdown()
 {
 	for (auto& c : unique_components) {
 		c->shutdown();
-		c.release();
 	}
 	unique_components.clear();
 	this->Release();
@@ -170,6 +179,72 @@ void Miner::shutdown()
 //		}
 //	}
 //}
+void Soldier::init()
+{
+	addComponent<TransformComponent>();
+	addComponent<GraphicsComponent>();
+
+	Util::String compName;
+	if (jsonVariables.find("modelName") != jsonVariables.end()) {
+		compName = "mdl:" + jsonVariables["modelName"] + ".n3";
+		registerVariable("modelName", compName, Type::ResourceName);
+	}
+	if (jsonVariables.find("skeletonName") != jsonVariables.end()) {
+		compName = "ske:" + jsonVariables["skeletonName"] + ".nsk3";
+		registerVariable("skeletonName", compName, Type::ResourceName);
+	}
+	if (jsonVariables.find("animationName") != jsonVariables.end()) {
+		compName = "ani:" + jsonVariables["animationName"] + ".nax3";
+		registerVariable("animationName", compName, Type::ResourceName);
+	}
+
+	for (auto& c : unique_components) c->init();
+}
+void Soldier::update()
+{
+	for (auto& c : unique_components) c->update();
+}
+void Soldier::shutdown()
+{
+	for (auto& c : unique_components) {
+		c->shutdown();
+	}
+	unique_components.clear();
+	this->Release();
+}
+void Spearman::init()
+{
+	addComponent<TransformComponent>();
+	addComponent<GraphicsComponent>();
+
+	Util::String compName;
+	if (jsonVariables.find("modelName") != jsonVariables.end()) {
+		compName = "mdl:" + jsonVariables["modelName"] + ".n3";
+		registerVariable("modelName", compName, Type::ResourceName);
+	}
+	if (jsonVariables.find("skeletonName") != jsonVariables.end()) {
+		compName = "ske:" + jsonVariables["skeletonName"] + ".nsk3";
+		registerVariable("skeletonName", compName, Type::ResourceName);
+	}
+	if (jsonVariables.find("animationName") != jsonVariables.end()) {
+		compName = "ani:" + jsonVariables["animationName"] + ".nax3";
+		registerVariable("animationName", compName, Type::ResourceName);
+	}
+
+	for (auto& c : unique_components) c->init();
+}
+void Spearman::update()
+{
+	for (auto& c : unique_components) c->update();
+}
+void Spearman::shutdown()
+{
+	for (auto& c : unique_components) {
+		c->shutdown();
+	}
+	unique_components.clear();
+	this->Release();
+}
 
 
 
@@ -179,7 +254,7 @@ void TransformComponent::init()
 }
 void TransformComponent::update()
 {
-	move(0.01, 0, 0); // yay it works
+	move(0, 0, 0.01); // yay it works
 }
 void TransformComponent::shutdown()
 {
@@ -228,6 +303,10 @@ Union::Union(const char* r)
 {
 	this->rscName = r;
 }
+Union::Union(const Util::String s)
+{
+	this->rscName = s;
+}
 Union::~Union()
 {
 }
@@ -243,19 +322,21 @@ void Union::operator=(const Math::matrix44& val)
 
 void EntityManager::init()
 {
-	for (auto& e : entities) e->init();
+	for (auto& e : Get().entities) e->init();
 }
 void EntityManager::update()
 {
-	for (auto& e : entities) e->update();
+	for (auto& e : Get().entities) e->update();
 }
 void EntityManager::shutdown()
 {
-	for (auto& e : entities) {
+	for (auto& e : Get().entities) {
 		e->shutdown();
-		e.release();
 	}
-	entities.clear();
+	Get().entities.clear();
+	Get().jsonr->Close();
+	Get().jsonr->GetStream()->Release();
+	Get().jsonr->Release();
 }
 
 
@@ -268,7 +349,7 @@ void GraphicsComponent::init()
 	entity->registerVariable("graphicsEntityID", Graphics::GraphicsEntityId(), Type::GraphicsEntityID);
 
 	//if entity has skeleton, register skeleton
-	if (entity->getVariable("skeletonName")->rscName.Value() != nullptr) {
+	if (entity->getVariable("skeletonName")) {
 		Graphics::RegisterEntity<Models::ModelContext, Visibility::ObservableContext, Characters::CharacterContext>(entity->getVariable("graphicsEntityID")->grEntID);
 	}
 	else
@@ -277,7 +358,7 @@ void GraphicsComponent::init()
 	Models::ModelContext::SetTransform(entity->getVariable("graphicsEntityID")->grEntID, *entity->getVariable("matrix44")->matrix44);
 	Visibility::ObservableContext::Setup(entity->getVariable("graphicsEntityID")->grEntID, Visibility::VisibilityEntityType::Model);
 	//if entity has skeleton, add animation
-	if (entity->getVariable("skeletonName")->rscName.Value() != nullptr) {
+	if (entity->getVariable("skeletonName")) {
 		Characters::CharacterContext::Setup(entity->getVariable("graphicsEntityID")->grEntID, entity->getVariable("skeletonName")->rscName, entity->getVariable("animationName")->rscName, "Examples");
 		Characters::CharacterContext::PlayClip(entity->getVariable("graphicsEntityID")->grEntID, nullptr, 0, 0, Characters::Append, 1.0f, 1, Math::n_rand() * 100.0f, 0.0f, 0.0f, Math::n_rand() * 100.0f);
 	}

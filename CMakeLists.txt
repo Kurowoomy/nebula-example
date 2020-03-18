@@ -18,6 +18,9 @@ nebula_begin_app(nebula-example windowed)
             exampleapp.h
 	    ECS.h
 	    ECS.cpp
+	    init.py
+	    pyBindings.h
+	    variables.json
         )
 
     fips_deps(foundation render resource dynui scripting)

@@ -11,3 +11,4 @@ fips-generators/*.pyc
 export_win32/*
 export_linux/*
 work/*
+pybind11/*

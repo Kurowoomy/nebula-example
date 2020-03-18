@@ -29,6 +29,12 @@
 #include "io/fswrapper.h"
 #include "system/nebulasettings.h"
 
+//my own additions-----
+#include "io/jsonreader.h"
+#include "io/filestream.h"
+#include <type_traits>  //for when registering variables from json in addEntity()
+
+
 class BaseComponent;
 class BaseEntity;
 class EntityManager;
@@ -71,26 +77,25 @@ public:
 
 	
 };
-//TODO: create move message that inherits from Message, add specific variables in it. 
-//move : Message*
-//varför pekare? kanske inte behövs.
 
 class BaseEntity : public Core::RefCounted
 {
 	__DeclareClass(BaseEntity)
 	std::map<Util::StringAtom, Union> variables; //register variables for the components here
 public:
-	std::vector<std::unique_ptr<BaseComponent>> unique_components; //refcount and looping
+	std::vector<BaseComponent*> unique_components; //refcount and looping
 	std::array<BaseComponent*, 32> componentArray; //accessing a component
 	std::string name; //finding a specific entity
 	EntityManager* entityManager; //accessing the other entities
 	Message messager;
 
+	std::map<Util::String, Util::String> jsonVariables;
+
 	virtual void init();
 	virtual void update();
 	virtual void shutdown();
 
-	template<typename T> T& addComponent(); //just specify entity class
+	template<typename T> void addComponent(); //just specify entity type
 	template<typename T> 
 	T& getComponent() //unresolved external symbol if declared in cpp
 	{
@@ -106,31 +111,92 @@ public:
 	Union* getVariable(Util::StringAtom varName);
 };
 
+//singleton
 class EntityManager
 {
-public:
-	std::vector<std::unique_ptr<BaseEntity>> entities;
+private:
+	EntityManager() {
+		jsonr = IO::JsonReader::Create();
+		jsonr->AddRef();
+		Ptr<IO::FileStream> stream = IO::FileStream::Create();
+		stream->SetURI("C:/Users/emmeli-8-local/Documents/S0016D_Spelmotorarkitektur/nebula-env/nebula-example/code/variables.json");
+		jsonr->SetStream(stream);
+		jsonr->GetStream()->AddRef();
 
-	void init();
-	void update();
-	void shutdown();
+		jsonr->Open();
+		for (auto& node : jsonr->GetAttrs()) {
+			jsonr->SetToRoot();
+			jsonr->SetToNode(node);
+			entNumbers.emplace(node, jsonr->GetInt("num"));
+		}
+	}
+
+public:
+	std::vector<BaseEntity*> entities;
+	std::map<Util::String, int> entNumbers;
+	IO::JsonReader* jsonr;
+
+	static EntityManager& Get() {
+		static EntityManager instance;
+		return instance;
+	}
+	std::vector<BaseEntity*> getEntities() {
+		return EntityManager::Get().entities;
+	}
+	int getNumOfEntities(std::string s) {
+		Util::String str = s.c_str();
+		return EntityManager::Get().entNumbers[str];
+	}
+
+	static void init();
+	static void update();
+	static void shutdown();
 
 	template<typename T> 
-	void addEntity(std::string name) //unresolved external symbol if declared in cpp
+	static void addEntity(std::string name) //unresolved external symbol if declared in cpp
 	{
-		T* newEntity = T::Create();
-		newEntity->AddRef();
-		newEntity->name = name;
-		newEntity->entityManager = this;
-		entities.emplace_back(newEntity);
+		Get().entities.emplace_back(T::Create());
+		Get().entities.back()->AddRef();
+		Get().entities.back()->name = name;
+		Get().entities.back()->entityManager = &Get();
+
+		//json
+		//Problem: Can't open json :(
+		//Solution: Don't open json :)
+		//set jsonr to the right node, add variables to entity's dictionary
+		Get().jsonr->SetToRoot();
+		if (std::is_same_v<T, King>) {
+			Get().jsonr->SetToNode("entity1");
+			Get().jsonr->SetToNode("graphicsComponents");
+			for (auto& g : Get().jsonr->GetAttrs()) {
+				const char* c = g.AsCharPtr();
+				Get().entities.back()->jsonVariables.emplace(g, Get().jsonr->GetString(c));
+			}
+		}
+		else if(std::is_same_v<T, Soldier>) {
+			Get().jsonr->SetToNode("entity2");
+			Get().jsonr->SetToNode("graphicsComponents");
+			for (auto& g : Get().jsonr->GetAttrs()) {
+				const char* c = g.AsCharPtr();
+				Get().entities.back()->jsonVariables.emplace(g, Get().jsonr->GetString(c));
+			}
+		}
+		else if(std::is_same_v<T, Spearman>) {
+			Get().jsonr->SetToNode("entity3");
+			Get().jsonr->SetToNode("graphicsComponents");
+			for (auto& g : Get().jsonr->GetAttrs()) {
+				const char* c = g.AsCharPtr();
+				Get().entities.back()->jsonVariables.emplace(g, Get().jsonr->GetString(c));
+			}
+		}
 	}
 
 	template<typename T>
-	T* getEntity(std::string name) //unresolved external symbol if declared in cpp
+	static T* getEntity(std::string name) //unresolved external symbol if declared in cpp
 	{
-		for (auto& e : entities) {
-			if (e.get()->name == name) {
-				return (T*)e.get();
+		for (auto& e : Get().entities) {
+			if (e->name == name) {
+				return (T*)e;
 			}
 		}
 		return nullptr;
@@ -177,6 +243,7 @@ struct Union {
 	Union(const Math::matrix44& m);
 	Union(const Graphics::GraphicsEntityId& g);
 	Union(const char* r); //for Resources::ResourceName
+	Union(const Util::String);
 	~Union();
 
 	void operator=(const Union& val);
@@ -184,9 +251,29 @@ struct Union {
 
 };
 
-class Miner : public BaseEntity
+class King : public BaseEntity
 {
-	__DeclareClass(Miner)
+	__DeclareClass(King)
+public:
+	void init();
+	void update();
+	void shutdown();
+
+	//void moveAwayFromMe(); //message example
+};
+class Soldier : public BaseEntity
+{
+	__DeclareClass(Soldier)
+public:
+	void init();
+	void update();
+	void shutdown();
+
+	//void moveAwayFromMe(); //message example
+};
+class Spearman : public BaseEntity
+{
+	__DeclareClass(Spearman)
 public:
 	void init();
 	void update();
@@ -208,5 +295,4 @@ public:
 
 	void handleMessage(Message* msg);
 };
-
 
